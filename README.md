@@ -26,7 +26,10 @@ Jane Doe,DE43100500000920018963,,10.00,EUR,Test Transfer,25.5
 ```
 
 ### Run the Script
-python csv_to_sepa_xml.py transfers.csv
+python csv_to_sepa_xml.py transfers.csv sepa_transfer.xml
+
+### Input
+transfers.csv
 
 ### Ouput
 sepa_transfer.xml
