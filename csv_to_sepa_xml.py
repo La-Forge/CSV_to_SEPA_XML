@@ -23,6 +23,7 @@ def read_csv(file_path):
             for row in reader:
                 row["iban"] = clean_iban(row["iban"])  # Clean IBAN
                 row["amount"] = float(row["amount"])  # Convert amount to float
+                row["reference"] = row["reference"][:35]  # Limit EndToEndId to 35 characters
                 transactions.append(row)
     except FileNotFoundError:
         print(f"Error: The file {file_path} does not exist.")
@@ -90,7 +91,7 @@ def generate_sepa_xml(transactions, output_file):
     for row in transactions:
         cdtTrfTxInf = ET.SubElement(pmtInf, "CdtTrfTxInf")
         pmtId = ET.SubElement(cdtTrfTxInf, "PmtId")
-        ET.SubElement(pmtId, "EndToEndId").text = row["reference"]
+        ET.SubElement(pmtId, "EndToEndId").text = row["reference"][:35]
 
         amt = ET.SubElement(cdtTrfTxInf, "Amt")
         instdAmt = ET.SubElement(amt, "InstdAmt", Ccy=row["currency"])
