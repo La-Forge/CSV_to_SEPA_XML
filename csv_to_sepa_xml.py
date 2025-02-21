@@ -43,8 +43,10 @@ def generate_sepa_xml(transactions, output_file):
             sys.exit(1)
 
     # Create SEPA XML root element
-    root = ET.Element("Document", xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03")
-    cstmrCdtTrfInitn = ET.SubElement(root, "CstmrCdtTrfInitn")
+    ns = "urn:iso:std:iso:20022:tech:xsd:pain.001.001.03"
+    ET.register_namespace('', ns)
+    root = ET.Element("{urn:iso:std:iso:20022:tech:xsd:pain.001.001.03}Document")
+    cstmrCdtTrfInitn = ET.SubElement(root, "{urn:iso:std:iso:20022:tech:xsd:pain.001.001.03}CstmrCdtTrfInitn")
 
     # Payment information
     grpHdr = ET.SubElement(cstmrCdtTrfInitn, "GrpHdr")
@@ -57,24 +59,31 @@ def generate_sepa_xml(transactions, output_file):
     initgPty = ET.SubElement(grpHdr, "InitgPty")
     ET.SubElement(initgPty, "Nm").text = "La Forge"
 
-    # Bulk payment details
+    # Payment details
     pmtInf = ET.SubElement(cstmrCdtTrfInitn, "PmtInf")
     ET.SubElement(pmtInf, "PmtInfId").text = "BatchTransfer"
     ET.SubElement(pmtInf, "PmtMtd").text = "TRF"
     ET.SubElement(pmtInf, "NbOfTxs").text = str(len(transactions))
     ET.SubElement(pmtInf, "CtrlSum").text = str(sum(row["amount"] for row in transactions))
 
+    # Payment type information
     pmtTpInf = ET.SubElement(pmtInf, "PmtTpInf")
     svcLvl = ET.SubElement(pmtTpInf, "SvcLvl")
     ET.SubElement(svcLvl, "Cd").text = "SEPA"
 
-    # Debtor account (modify as needed)
-    cdtrAcct = ET.SubElement(pmtInf, "DbtrAcct")
-    id_element = ET.SubElement(cdtrAcct, "Id")
+    # Requested execution date
+    ET.SubElement(pmtInf, "ReqdExctnDt").text = datetime.now().strftime("%Y-%m-%d")
+
+    # Debtor details
+    dbtr = ET.SubElement(pmtInf, "Dbtr")
+    ET.SubElement(dbtr, "Nm").text = "La Forge"
+
+    dbtrAcct = ET.SubElement(pmtInf, "DbtrAcct")
+    id_element = ET.SubElement(dbtrAcct, "Id")
     ET.SubElement(id_element, "IBAN").text = "FRXXXXXXXXXXXXXXXXXXXX"
 
-    cdtrAgt = ET.SubElement(pmtInf, "DbtrAgt")
-    finInstnId = ET.SubElement(cdtrAgt, "FinInstnId")
+    dbtrAgt = ET.SubElement(pmtInf, "DbtrAgt")
+    finInstnId = ET.SubElement(dbtrAgt, "FinInstnId")
     ET.SubElement(finInstnId, "BIC").text = "BNPAFRPPXXX"
 
     # Individual transactions
@@ -85,7 +94,7 @@ def generate_sepa_xml(transactions, output_file):
 
         amt = ET.SubElement(cdtTrfTxInf, "Amt")
         instdAmt = ET.SubElement(amt, "InstdAmt", Ccy=row["currency"])
-        instdAmt.text = str(row["amount"])
+        instdAmt.text = f"{row['amount']:.2f}"
 
         cdtr = ET.SubElement(cdtTrfTxInf, "Cdtr")
         ET.SubElement(cdtr, "Nm").text = row["beneficiary_name"]
@@ -94,6 +103,13 @@ def generate_sepa_xml(transactions, output_file):
         id_element = ET.SubElement(cdtrAcct, "Id")
         ET.SubElement(id_element, "IBAN").text = row["iban"]
 
+        cdtrAgt = ET.SubElement(cdtTrfTxInf, "CdtrAgt")
+        finInstnId = ET.SubElement(cdtrAgt, "FinInstnId")
+        ET.SubElement(finInstnId, "BIC").text = row.get("bic", "N/A")
+
+        rmtInf = ET.SubElement(cdtTrfTxInf, "RmtInf")
+        ET.SubElement(rmtInf, "Ustrd").text = row.get("remittance_info", "Payment")
+
     # Save the XML file
     tree = ET.ElementTree(root)
     tree.write(output_file, encoding="utf-8", xml_declaration=True)
@@ -101,18 +117,14 @@ def generate_sepa_xml(transactions, output_file):
 
 # Main function
 def main():
-    # Check command-line arguments
-    if len(sys.argv) != 2:
-        print("Usage: python csv_to_sepa_xml.py <path_to_CSV_file>")
+    if len(sys.argv) != 3:
+        print("Usage: python csv_to_sepa_xml.py <path_to_CSV_file> <output_XML_file>")
         sys.exit(1)
 
     csv_file_path = sys.argv[1]
-    xml_output_file = "sepa_transfer.xml"
+    xml_output_file = sys.argv[2]
 
-    # Read the CSV file
     transactions = read_csv(csv_file_path)
-
-    # Generate the XML file
     generate_sepa_xml(transactions, xml_output_file)
 
 if __name__ == "__main__":
