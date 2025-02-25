@@ -14,6 +14,15 @@ SEPA_COUNTRIES = {
 def clean_iban(iban):
     return re.sub(r"\s+", "", iban)
 
+# Function to convert amount string to float, handling thousands separator and decimal comma
+def parse_amount(amount_str):
+    try:
+        # Remplace les espaces insécables et les virgules par des points
+        cleaned_amount = amount_str.replace('\u202f', '').replace(' ', '').replace(',', '.')
+        return float(cleaned_amount)
+    except ValueError:
+        raise ValueError(f"Invalid amount format: '{amount_str}'")
+
 # Function to read CSV file
 def read_csv(file_path):
     transactions = []
@@ -22,7 +31,7 @@ def read_csv(file_path):
             reader = csv.DictReader(csvfile)
             for row in reader:
                 row["iban"] = clean_iban(row["iban"])  # Clean IBAN
-                row["amount"] = float(row["amount"])  # Convert amount to float
+                row["amount"] = parse_amount(row["amount"])  # Convert amount to float
                 row["reference"] = row["reference"][:35]  # Limit EndToEndId to 35 characters
                 transactions.append(row)
     except FileNotFoundError:
